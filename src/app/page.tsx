@@ -1,65 +1,133 @@
-import Image from "next/image";
+"use client";
+
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
+
+import {
+  appendTodo,
+  createLocalStorageTodoRepository,
+  createTodo,
+  filterTodos,
+  removeTodo,
+  toggleTodo,
+  type Todo,
+  type TodoFilter,
+} from "@/todos";
 import styles from "./page.module.css";
 
+const repository = createLocalStorageTodoRepository();
+
 export default function Home() {
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [filter, setFilter] = useState<TodoFilter>("all");
+  const [title, setTitle] = useState<string>("");
+  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+
+  useEffect(() => {
+    void repository.getAll().then((savedTodos) => {
+      setTodos(savedTodos);
+      setIsLoaded(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    void repository.saveAll(todos);
+  }, [isLoaded, todos]);
+
+  const visibleTodos = useMemo(() => filterTodos(todos, filter), [todos, filter]);
+  const activeCount = useMemo(() => todos.filter((todo) => !todo.completed).length, [todos]);
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const newTodo = createTodo(title);
+    if (newTodo === null) {
+      return;
+    }
+
+    setTodos((prevTodos) => appendTodo(prevTodos, newTodo));
+    setTitle("");
+  };
+
+  const handleTitleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setTitle(event.target.value);
+  };
+
   return (
     <div className={styles.page}>
       <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
+        <header className={styles.header}>
+          <h1>To-do List</h1>
+          <p>개인 할 일을 빠르게 기록하고 관리하세요.</p>
+        </header>
+
+        <form className={styles.form} onSubmit={handleSubmit}>
+          <input
+            className={styles.input}
+            type="text"
+            placeholder="할 일을 입력하세요"
+            value={title}
+            onChange={handleTitleChange}
+            aria-label="할 일 입력"
+          />
+          <button className={styles.addButton} type="submit">
+            추가
+          </button>
+        </form>
+
+        <div className={styles.filters} role="tablist" aria-label="할 일 필터">
+          {(["all", "active", "completed"] as const).map((filterItem) => (
+            <button
+              key={filterItem}
+              type="button"
+              role="tab"
+              aria-selected={filter === filterItem}
+              className={filter === filterItem ? styles.filterActive : styles.filter}
+              onClick={() => setFilter(filterItem)}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              {filterItem === "all" && "전체"}
+              {filterItem === "active" && "진행중"}
+              {filterItem === "completed" && "완료"}
+            </button>
+          ))}
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+        <section className={styles.section}>
+          <p className={styles.count}>남은 할 일: {activeCount}</p>
+
+          {!isLoaded ? (
+            <p className={styles.empty}>불러오는 중...</p>
+          ) : visibleTodos.length === 0 ? (
+            <p className={styles.empty}>표시할 할 일이 없습니다.</p>
+          ) : (
+            <ul className={styles.list}>
+              {visibleTodos.map((todo) => (
+                <li key={todo.id} className={styles.item}>
+                  <label className={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={todo.completed}
+                      onChange={() => setTodos((prevTodos) => toggleTodo(prevTodos, todo.id))}
+                      aria-label={`${todo.title} 완료 토글`}
+                    />
+                    <span className={todo.completed ? styles.completed : styles.todoTitle}>{todo.title}</span>
+                  </label>
+                  <button
+                    type="button"
+                    className={styles.deleteButton}
+                    onClick={() => setTodos((prevTodos) => removeTodo(prevTodos, todo.id))}
+                    aria-label={`${todo.title} 삭제`}
+                  >
+                    삭제
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </main>
     </div>
   );
