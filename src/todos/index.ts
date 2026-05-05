@@ -4,4 +4,5 @@ export { filterTodos } from "./filters";
 export { appendTodo, createTodo, removeTodo, toggleTodo } from "./actions";
 export { createLocalStorageTodoRepository } from "./local-storage-repository";
 export { createFirebaseTodoRepository } from "./firebase-repository";
+export { createTodoRepository, getTodoStorageType } from "./storage";
 

@@ -4,7 +4,7 @@ import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "
 
 import {
   appendTodo,
-  createLocalStorageTodoRepository,
+  createTodoRepository,
   createTodo,
   filterTodos,
   removeTodo,
@@ -14,7 +14,7 @@ import {
 } from "@/todos";
 import styles from "./page.module.css";
 
-const repository = createLocalStorageTodoRepository();
+const repository = createTodoRepository();
 
 export default function Home() {
   const [todos, setTodos] = useState<Todo[]>([]);
