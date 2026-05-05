@@ -104,9 +104,17 @@ const ensureAnonymousUser = async (): Promise<string> => {
   try {
     const credential = await signInAnonymously(clientAuth);
     return credential.user.uid;
-  } catch {
+  } catch (error: unknown) {
+    const firebaseErrorCode =
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      typeof (error as { code?: unknown }).code === "string"
+        ? (error as { code: string }).code
+        : "unknown";
+
     throw new Error(
-      "익명 로그인에 실패했습니다. Firebase Console > Authentication에서 Anonymous 제공업체를 활성화하세요.",
+      `익명 로그인에 실패했습니다. Firebase Console > Authentication에서 Anonymous 제공업체를 활성화하세요. (code: ${firebaseErrorCode})`,
     );
   }
 };
