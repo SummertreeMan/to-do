@@ -25,6 +25,11 @@ npm run lint
 - `NEXT_PUBLIC_TODO_STORAGE=localStorage` (기본)
 - `NEXT_PUBLIC_TODO_STORAGE=firebase`
 
+참고:
+
+- `NEXT_PUBLIC_TODO_STORAGE` 값을 지정하지 않아도, `NEXT_PUBLIC_FIREBASE_*` 6개 값이 모두 존재하면 자동으로 `firebase` 저장소를 사용합니다.
+- Vercel 배포에서 DB 저장이 필요하면 `NEXT_PUBLIC_TODO_STORAGE=firebase`를 명시하는 것을 권장합니다.
+
 ## Firebase 설정
 
 1. Firebase Console에서 프로젝트 생성
@@ -42,6 +47,12 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
 NEXT_PUBLIC_FIREBASE_APP_ID=...
+```
+
+빠른 설정:
+
+```bash
+cp .env.local.example .env.local
 ```
 
 ## Firestore 데이터 구조 (인증 기반)

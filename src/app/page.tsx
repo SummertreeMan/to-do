@@ -21,12 +21,21 @@ export default function Home() {
   const [filter, setFilter] = useState<TodoFilter>("all");
   const [title, setTitle] = useState<string>("");
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    void repository.getAll().then((savedTodos) => {
-      setTodos(savedTodos);
-      setIsLoaded(true);
-    });
+    void repository
+      .getAll()
+      .then((savedTodos) => {
+        setTodos(savedTodos);
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "할 일을 불러오지 못했습니다.";
+        setLoadError(message);
+      })
+      .finally(() => {
+        setIsLoaded(true);
+      });
   }, []);
 
   useEffect(() => {
@@ -34,7 +43,10 @@ export default function Home() {
       return;
     }
 
-    void repository.saveAll(todos);
+    void repository.saveAll(todos).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : "할 일을 저장하지 못했습니다.";
+      setLoadError(message);
+    });
   }, [isLoaded, todos]);
 
   const visibleTodos = useMemo(() => filterTodos(todos, filter), [todos, filter]);
@@ -97,6 +109,7 @@ export default function Home() {
 
         <section className={styles.section}>
           <p className={styles.count}>남은 할 일: {activeCount}</p>
+          {loadError !== null && <p className={styles.error}>{loadError}</p>}
 
           {!isLoaded ? (
             <p className={styles.empty}>불러오는 중...</p>
