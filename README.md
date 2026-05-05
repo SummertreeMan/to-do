@@ -44,25 +44,34 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
 NEXT_PUBLIC_FIREBASE_APP_ID=...
 ```
 
-## Firestore 데이터 구조
+## Firestore 데이터 구조 (인증 기반)
 
-- 컬렉션: `todos`
-- 문서 ID: `todo.id`
+- 경로: `users/{uid}/todos/{todoId}`
+- `uid`: Firebase Authentication 사용자 UID (익명 로그인 포함)
+- `todoId`: 앱의 `todo.id`
 - 문서 필드: `id`, `title`, `completed`, `createdAt`
 
-## Firestore 보안 규칙 (MVP 개발용)
+## Firebase Auth (익명 로그인) 설정
 
-로그인 기능이 아직 없으므로, 개발 단계에서는 테스트용으로만 아래 규칙을 사용하세요.
+이 앱은 Firebase 저장소 사용 시 자동으로 익명 로그인을 시도합니다.
+Firebase Console에서 반드시 아래를 켜주세요.
 
-```txt
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /todos/{todoId} {
-      allow read, write: if true;
-    }
-  }
-}
+1. Firebase Console > Authentication > Sign-in method
+2. `익명(Anonymous)` 제공업체 활성화
+
+## Firestore 보안 규칙 (강화)
+
+프로젝트 루트의 `firestore.rules`를 사용합니다.
+핵심 정책:
+
+- 인증된 사용자만 접근 가능
+- 본인 UID 경로(`users/{uid}`)에만 읽기/쓰기 가능
+- To-do 필드 구조/타입 검증(`id`, `title`, `completed`, `createdAt`)
+
+적용 방법:
+
+```bash
+firebase login
+firebase use <your-project-id>
+firebase deploy --only firestore:rules
 ```
-
-운영에서는 인증 도입 후 규칙을 반드시 제한해야 합니다.

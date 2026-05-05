@@ -1,4 +1,5 @@
 import { initializeApp, type FirebaseOptions, getApps } from "firebase/app";
+import { getAuth, signInAnonymously, type Auth } from "firebase/auth";
 import {
   collection,
   doc,
@@ -11,9 +12,8 @@ import {
 } from "firebase/firestore";
 
 import type { TodoRepository } from "./repository";
+import { getUserTodosPathSegments } from "./firebase-path";
 import type { Todo } from "./types";
-
-const TODO_COLLECTION = "todos";
 
 type FirebaseEnv = Readonly<{
   apiKey: string;
@@ -70,6 +70,7 @@ const firebaseConfigFromEnv = (): FirebaseOptions => {
 };
 
 let firestore: Firestore | null = null;
+let auth: Auth | null = null;
 
 const getClientFirestore = (): Firestore => {
   if (firestore !== null) {
@@ -82,10 +83,41 @@ const getClientFirestore = (): Firestore => {
   return firestore;
 };
 
+const getClientAuth = (): Auth => {
+  if (auth !== null) {
+    return auth;
+  }
+
+  const app = getApps()[0] ?? initializeApp(firebaseConfigFromEnv());
+  auth = getAuth(app);
+
+  return auth;
+};
+
+const ensureAnonymousUser = async (): Promise<string> => {
+  const clientAuth = getClientAuth();
+
+  if (clientAuth.currentUser?.uid !== undefined) {
+    return clientAuth.currentUser.uid;
+  }
+
+  try {
+    const credential = await signInAnonymously(clientAuth);
+    return credential.user.uid;
+  } catch {
+    throw new Error(
+      "익명 로그인에 실패했습니다. Firebase Console > Authentication에서 Anonymous 제공업체를 활성화하세요.",
+    );
+  }
+};
+
+const getUserTodosCollection = (db: Firestore, uid: string) => collection(db, ...getUserTodosPathSegments(uid));
+
 export const createFirebaseTodoRepository = (): TodoRepository => ({
   getAll: async () => {
     const db = getClientFirestore();
-    const todosQuery = query(collection(db, TODO_COLLECTION), orderBy("createdAt", "desc"));
+    const uid = await ensureAnonymousUser();
+    const todosQuery = query(getUserTodosCollection(db, uid), orderBy("createdAt", "desc"));
     const snapshot = await getDocs(todosQuery);
 
     return snapshot.docs
@@ -94,7 +126,8 @@ export const createFirebaseTodoRepository = (): TodoRepository => ({
   },
   saveAll: async (todos) => {
     const db = getClientFirestore();
-    const todoCollection = collection(db, TODO_COLLECTION);
+    const uid = await ensureAnonymousUser();
+    const todoCollection = getUserTodosCollection(db, uid);
     const currentSnapshot = await getDocs(todoCollection);
     const nextTodoIds = new Set(todos.map((todo) => todo.id));
     const batch = writeBatch(db);
@@ -106,7 +139,7 @@ export const createFirebaseTodoRepository = (): TodoRepository => ({
     });
 
     todos.forEach((todo) => {
-      const todoRef = doc(db, TODO_COLLECTION, todo.id);
+      const todoRef = doc(db, ...getUserTodosPathSegments(uid), todo.id);
       batch.set(todoRef, todo);
     });
 
